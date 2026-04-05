@@ -726,22 +726,7 @@ async function parseTerrainFile(file: File): Promise<TerrainModel> {
     return parseLandXMLTerrain(text, file.name);
   }
 
-  if (lower.endsWith(".json")) {
-    const text = await file.text();
-    return parseJSONTerrain(text, file.name);
-  }
-
-  if (lower.endsWith(".txt") || lower.endsWith(".csv")) {
-    const text = await file.text();
-    return parseTextTerrain(text, file.name);
-  }
-
-  if (lower.endsWith(".tp3")) {
-    const buffer = await file.arrayBuffer();
-    return parseTP3Terrain(buffer, file.name);
-  }
-
-  throw new Error("対応形式は .xml / .tp3 / .json / .txt / .csv です。");
+  throw new Error("対応形式は .xml です。");
 }
 
 function CameraRig({
@@ -1070,7 +1055,7 @@ export default function App() {
           "",
           message,
           "",
-          "対応形式は .xml / .tp3 / .json / .txt / .csv です。"
+          "対応形式は .xml  です。"
         ].join("\n")
       );
     } finally {
@@ -1092,12 +1077,12 @@ export default function App() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xml,.tp3,.json,.txt,.csv"
+            accept=".xml"
             onChange={handleFileUpload}
             style={{ display: "none" }}
           />
           <button onClick={() => fileInputRef.current?.click()}>
-            設計面ファイルを読込 (.xml / .tp3 / .json / .txt / .csv)
+            設計面ファイルを読込 (.xml)
           </button>
           {loading && <span style={{ marginLeft: 10 }}>Loading...</span>}
           {loadedFileName && (
