@@ -96,6 +96,15 @@ function DesignCursor({
   const diff = bucketTip.y - groundY;
   const color = diffColor(diff);
 
+  const line = useMemo(() => {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(bucketTip.x, groundY, bucketTip.z),
+      new THREE.Vector3(bucketTip.x, bucketTip.y, bucketTip.z)
+    ]);
+    const material = new THREE.LineBasicMaterial({ color });
+    return new THREE.Line(geometry, material);
+  }, [bucketTip.x, bucketTip.y, bucketTip.z, groundY, color]);
+
   return (
     <>
       <mesh position={[bucketTip.x, groundY, bucketTip.z]}>
@@ -103,16 +112,7 @@ function DesignCursor({
         <meshStandardMaterial color={color} />
       </mesh>
 
-      <line>
-        <bufferGeometry
-          attach="geometry"
-          setFromPoints={[
-            new THREE.Vector3(bucketTip.x, groundY, bucketTip.z),
-            new THREE.Vector3(bucketTip.x, bucketTip.y, bucketTip.z)
-          ]}
-        />
-        <lineBasicMaterial attach="material" color={color} />
-      </line>
+      <primitive object={line} />
     </>
   );
 }
@@ -129,9 +129,10 @@ function Excavator({
   const armRef = useRef<THREE.Group>(null);
   const bucketRef = useRef<THREE.Group>(null);
 
-  const boomLength = 3.8;
-  const armLength = 3.0;
-  const bucketLength = 1.2;
+  // 実機寄せの比率
+  const boomLength = 4.5;
+  const armLength = 3.5;
+  const bucketOffset = 0.8;
 
   useFrame(() => {
     if (!groupRef.current || !boomRef.current || !armRef.current || !bucketRef.current) return;
@@ -141,11 +142,15 @@ function Excavator({
     groupRef.current.position.set(machine.x, machine.y, machine.z);
     groupRef.current.rotation.y = degToRad(machine.yawDeg);
 
+    // ★2段折り構造
     boomRef.current.rotation.z = degToRad(joints.boomDeg);
     armRef.current.rotation.z = degToRad(joints.armDeg);
-    bucketRef.current.rotation.z = degToRad(joints.bucketDeg);
 
-    const localTip = new THREE.Vector3(bucketLength, 0, 0);
+    // バケットは微調整のみ（強く曲げない）
+    bucketRef.current.rotation.z = degToRad(joints.bucketDeg * 0.5);
+
+    // 先端計算
+    const localTip = new THREE.Vector3(bucketOffset, -0.3, 0);
     const worldTip = bucketRef.current.localToWorld(localTip.clone());
     onBucketTipComputed(worldTip);
   });
@@ -153,60 +158,57 @@ function Excavator({
   return (
     <group ref={groupRef}>
       <group position={[0, 0.7, 0]}>
-        <mesh castShadow receiveShadow position={[0, -0.35, 0]}>
+        
+        {/* クローラ */}
+        <mesh position={[0, -0.35, 0]}>
           <boxGeometry args={[4.6, 0.4, 2.6]} />
           <meshStandardMaterial color="#1f2937" />
         </mesh>
 
-        <mesh castShadow receiveShadow position={[0, 0.1, 0]}>
+        {/* 上部旋回体 */}
+        <mesh position={[0, 0.1, 0]}>
           <boxGeometry args={[3.4, 0.8, 2.2]} />
           <meshStandardMaterial color="#f59e0b" />
         </mesh>
 
-        <mesh castShadow position={[0.5, 0.95, 0]}>
+        {/* キャビン */}
+        <mesh position={[0.5, 0.95, 0]}>
           <boxGeometry args={[1.2, 0.9, 1.3]} />
           <meshStandardMaterial color="#fbbf24" />
         </mesh>
 
-        <mesh castShadow position={[-1.2, 0.15, 0]}>
-          <cylinderGeometry args={[0.4, 0.4, 2.1, 24]} />
-          <meshStandardMaterial color="#111827" />
-        </mesh>
-
-        <mesh castShadow position={[1.2, 0.15, 0]}>
-          <cylinderGeometry args={[0.4, 0.4, 2.1, 24]} />
-          <meshStandardMaterial color="#111827" />
-        </mesh>
-
-        <group position={[1.15, 0.95, 0]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.18, 0.18, 1.5, 20]} />
-            <meshStandardMaterial color="#111827" />
-          </mesh>
-
+        {/* ブーム基部 */}
+        <group position={[1.2, 1.0, 0]}>
+          
+          {/* ★ ブーム（1段目） */}
           <group ref={boomRef}>
-            <group position={[0.75, 0, 0]}>
-              <mesh castShadow position={[boomLength / 2, 0, 0]}>
-                <boxGeometry args={[boomLength, 0.35, 0.35]} />
-                <meshStandardMaterial color="#f59e0b" />
+            <mesh position={[boomLength / 2, 0, 0]}>
+              <boxGeometry args={[boomLength, 0.35, 0.35]} />
+              <meshStandardMaterial color="#f59e0b" />
+            </mesh>
+
+            {/* ★ アーム（2段目） */}
+            <group ref={armRef} position={[boomLength, 0, 0]}>
+              <mesh position={[armLength / 2, 0, 0]}>
+                <boxGeometry args={[armLength, 0.28, 0.28]} />
+                <meshStandardMaterial color="#fbbf24" />
               </mesh>
 
-              <group ref={armRef} position={[boomLength, 0, 0]}>
-                <mesh castShadow position={[armLength / 2, 0, 0]}>
-                  <boxGeometry args={[armLength, 0.28, 0.28]} />
-                  <meshStandardMaterial color="#fbbf24" />
+              {/* ★ バケット（先端ツール） */}
+              <group ref={bucketRef} position={[armLength, 0, 0]}>
+                
+                {/* バケット本体 */}
+                <mesh position={[0.3, -0.25, 0]}>
+                  <boxGeometry args={[0.9, 0.6, 0.5]} />
+                  <meshStandardMaterial color="#64748b" />
                 </mesh>
 
-                <group ref={bucketRef} position={[armLength, 0, 0]}>
-                  <mesh castShadow position={[bucketLength / 2, 0, 0]}>
-                    <boxGeometry args={[bucketLength, 0.22, 0.22]} />
-                    <meshStandardMaterial color="#f59e0b" />
-                  </mesh>
-                  <mesh castShadow position={[bucketLength + 0.2, -0.22, 0]}>
-                    <boxGeometry args={[0.55, 0.45, 0.3]} />
-                    <meshStandardMaterial color="#64748b" />
-                  </mesh>
-                </group>
+                {/* 爪（それっぽさ強化） */}
+                <mesh position={[0.6, -0.5, 0]}>
+                  <boxGeometry args={[0.2, 0.4, 0.3]} />
+                  <meshStandardMaterial color="#475569" />
+                </mesh>
+
               </group>
             </group>
           </group>
