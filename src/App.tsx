@@ -955,21 +955,6 @@ function Scene({
         <meshStandardMaterial color={diffColor(bucketTip.y - designHeightAt(activeSurface, bucketTip.x, bucketTip.z))} />
       </mesh>
 
-      <Html position={[telemetry.machine.x, telemetry.machine.y + 4.5, telemetry.machine.z]}>
-        <div
-          style={{
-            padding: "6px 10px",
-            background: "rgba(15,23,42,0.82)",
-            borderRadius: 10,
-            color: "white",
-            fontSize: 12,
-            border: "1px solid rgba(148,163,184,0.4)"
-          }}
-        >
-          Excavator
-        </div>
-      </Html>
-
       <OrbitControls makeDefault target={target} enablePan={true} />
     </>
   );
